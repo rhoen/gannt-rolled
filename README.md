@@ -15,3 +15,38 @@ This is actually the 2nd version of this idea to have Claude help build a simple
 ## Features
 
 There's a script in here that allows you to convert a monday.com task export into the JSON format used by this app. This app has save and open buttons which allow you to write and load .json files with the project config. There is no server/backend, the app just runs in your browser. In browsers that support the File System Access API, the app remembers recent project file handles so you can switch back to saved projects from the dropdown, but the task data itself is not stored in the browser cache.
+
+## Development and deployment
+
+This app is built with Vite and deployed to GitHub Pages from the `gh-pages` branch.
+
+Normal development happens on `main`. The `gh-pages` branch is not meant to be merged into manually; it is a generated branch that contains the built static files from `dist`.
+
+To run the app locally:
+
+```sh
+npm install
+npm run dev
+```
+
+To publish the current version:
+
+```sh
+npm run build
+git push origin main
+npm run deploy
+```
+
+The `deploy` script runs a Vite build and then uses the `gh-pages` package to publish the contents of `dist` to the remote `gh-pages` branch. You do not need to have a local `gh-pages` branch checked out for this to work.
+
+If you ever want to inspect the generated branch locally, you can create a tracking branch with:
+
+```sh
+git switch --track origin/gh-pages
+```
+
+Switch back to development with:
+
+```sh
+git switch main
+```
