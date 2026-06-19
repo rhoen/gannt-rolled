@@ -14,4 +14,4 @@ This is actually the 2nd version of this idea to have Claude help build a simple
 
 ## Features
 
-There's a script in here that allows you to convert a monday.com task export into the JSON format used by this app. This app has download and upload buttons which allow you to export and import .json files with the project config. There is no server/backend, the app just runs in your browser, but the task data is saved to the browser cache so you should be able to leave and return as long as you're not deleting the cache. Use the export option if you want to save your work and not rely on the cache sticking around.
+There's a script in here that allows you to convert a monday.com task export into the JSON format used by this app. This app has save and open buttons which allow you to write and load .json files with the project config. There is no server/backend, the app just runs in your browser. In browsers that support the File System Access API, the app remembers recent project file handles so you can switch back to saved projects from the dropdown, but the task data itself is not stored in the browser cache.

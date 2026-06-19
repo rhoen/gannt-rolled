@@ -1,7 +1,31 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+:root {
+  --gantt-surface: #ffffff;
+  --gantt-muted-surface: #f9fafb;
+  --gantt-alt-surface: #fafafa;
+  --gantt-grid: #e5e7eb;
+  --gantt-grid-strong: #d1d5db;
+  --gantt-axis-text: #6b7280;
+  --gantt-axis-muted: #9ca3af;
+  --gantt-shadow: rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  --gantt-surface: #111827;
+  --gantt-muted-surface: #1f2937;
+  --gantt-alt-surface: #172033;
+  --gantt-grid: #374151;
+  --gantt-grid-strong: #4b5563;
+  --gantt-axis-text: #d1d5db;
+  --gantt-axis-muted: #9ca3af;
+  --gantt-shadow: rgba(0, 0, 0, 0.28);
 }
 
 body {
@@ -9,6 +33,11 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   background: #f8f9fa;
   color: #1a1a2e;
+}
+
+.dark body {
+  background: #111827;
+  color: #f9fafb;
 }
 
 #root {

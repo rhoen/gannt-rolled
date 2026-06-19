@@ -58,8 +58,9 @@ export function GanttView() {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [dragTooltip, setDragTooltip] = useState<{
-    x: number; y: number; start: string; end: string
+    taskId: string; x: number; y: number; start: string; end: string
   } | null>(null);
+  const [activeDragTaskId, setActiveDragTaskId] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
 
   const pxPerDay = ZOOM_PX_PER_DAY[zoom];
@@ -153,6 +154,7 @@ export function GanttView() {
         origEnd: task.end,
         tooltip: null,
       };
+      setActiveDragTaskId(taskId);
     },
     []
   );
@@ -184,10 +186,9 @@ export function GanttView() {
       const relX = svgRect ? e.clientX - svgRect.left : 0;
       const relY = svgRect ? e.clientY - svgRect.top : 0;
       dragRef.current!.tooltip = { x: relX, y: relY, start: newStart, end: newEnd };
-      setDragTooltip({ x: relX, y: relY, start: newStart, end: newEnd });
+      setDragTooltip({ taskId: drag.taskId, x: relX, y: relY, start: newStart, end: newEnd });
 
-      // Live preview via forceUpdate (we mutate a ref copy)
-      dragRef.current!.origStart; // just touching ref
+      // Live preview via forceUpdate after mutating dragRef.
       forceUpdate((n) => n + 1);
     }
 
@@ -200,6 +201,7 @@ export function GanttView() {
       }
       dragRef.current = null;
       setDragTooltip(null);
+      setActiveDragTaskId(null);
     }
 
     window.addEventListener('mousemove', onMouseMove);
@@ -244,7 +246,7 @@ export function GanttView() {
         yearCur = new Date(yearCur.getFullYear() + 1, 0, 1);
       }
       const quarters = [[0, 'Q1'], [3, 'Q2'], [6, 'Q3'], [9, 'Q4']] as const;
-      let yCur = start.getFullYear();
+      const yCur = start.getFullYear();
       const yEnd = end.getFullYear() + 1;
       for (let y = yCur; y <= yEnd; y++) {
         for (const [m, label] of quarters) {
@@ -265,7 +267,7 @@ export function GanttView() {
         cur = nextMonth;
       }
       // Find first Monday before or on start
-      let weekCur = new Date(start);
+      const weekCur = new Date(start);
       const dow = weekCur.getDay();
       weekCur.setDate(weekCur.getDate() - (dow === 0 ? 6 : dow - 1));
       while (weekCur <= end) {
@@ -300,9 +302,8 @@ export function GanttView() {
 
   // Compute live preview positions during drag
   function getTaskBounds(task: Task): { x: number; width: number; start: string; end: string } {
-    const drag = dragRef.current;
-    if (drag && drag.taskId === task.id && drag.tooltip) {
-      const { start, end } = drag.tooltip;
+    if (activeDragTaskId === task.id && dragTooltip?.taskId === task.id) {
+      const { start, end } = dragTooltip;
       const x = dateToX(start);
       const endX = dateToX(end) + pxPerDay;
       return { x, width: Math.max(endX - x, pxPerDay), start, end };
@@ -332,11 +333,11 @@ export function GanttView() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
       {/* Gantt toolbar */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 shrink-0">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Zoom</span>
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-200 shrink-0 dark:border-gray-700">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide dark:text-gray-400">Zoom</span>
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden dark:border-gray-700">
           {(['Day', 'Week', 'Month', 'Quarter'] as ZoomLevel[]).map((z) => (
             <button
               key={z}
@@ -344,7 +345,7 @@ export function GanttView() {
               className={`px-3 py-1 text-sm transition-colors ${
                 zoom === z
                   ? 'bg-blue-600 text-white font-medium'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
               }`}
             >
               {z}
@@ -358,14 +359,14 @@ export function GanttView() {
         {/* Left panel */}
         <div
           style={{ width: LEFT_PANEL_W, minWidth: LEFT_PANEL_W }}
-          className="flex flex-col border-r border-gray-200 shrink-0"
+          className="flex flex-col border-r border-gray-200 shrink-0 dark:border-gray-700"
         >
           {/* Header matching time axis height */}
           <div
             style={{ height: TIME_HEADER_H }}
-            className="border-b border-gray-200 bg-gray-50 flex items-end px-3 pb-1.5 shrink-0"
+            className="border-b border-gray-200 bg-gray-50 flex items-end px-3 pb-1.5 shrink-0 dark:border-gray-700 dark:bg-gray-800"
           >
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tasks</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide dark:text-gray-500">Tasks</span>
           </div>
           {/* Rows */}
           <div
@@ -379,22 +380,22 @@ export function GanttView() {
                 <div
                   key={`s-${row.sectionId}`}
                   style={{ height: SECTION_ROW_H }}
-                  className="flex items-center px-3 bg-gray-50 border-b border-gray-100"
+                  className="flex items-center px-3 bg-gray-50 border-b border-gray-100 dark:border-gray-800 dark:bg-gray-800"
                 >
-                  <span className="text-xs font-semibold text-gray-600 truncate">{row.label}</span>
+                  <span className="text-xs font-semibold text-gray-600 truncate dark:text-gray-300">{row.label}</span>
                 </div>
               ) : (
                 <div
                   key={`t-${row.task.id}`}
                   style={{ height: TASK_ROW_H }}
-                  className="flex items-center px-3 pl-6 border-b border-gray-100 hover:bg-blue-50/40 transition-colors"
+                  className="flex items-center px-3 pl-6 border-b border-gray-100 hover:bg-blue-50/40 transition-colors dark:border-gray-800 dark:hover:bg-blue-950/30"
                 >
-                  <span className="text-sm text-gray-700 truncate">{row.task.text}</span>
+                  <span className="text-sm text-gray-700 truncate dark:text-gray-200">{row.task.text}</span>
                 </div>
               )
             )}
             {rows.length === 0 && (
-              <div className="px-3 py-6 text-sm text-gray-400 italic">No tasks</div>
+              <div className="px-3 py-6 text-sm text-gray-400 italic dark:text-gray-500">No tasks</div>
             )}
           </div>
         </div>
@@ -402,7 +403,7 @@ export function GanttView() {
         {/* Right scrollable panel */}
         <div
           ref={rightRef}
-          className="flex-1 overflow-auto relative"
+          className="flex-1 overflow-auto relative bg-white dark:bg-gray-900"
           onScroll={handleRightScroll}
         >
           <svg
@@ -410,7 +411,7 @@ export function GanttView() {
             width={totalWidth}
             height={totalHeight}
             className="block select-none"
-            style={{ cursor: dragRef.current ? 'grabbing' : 'default' }}
+            style={{ cursor: activeDragTaskId ? 'grabbing' : 'default' }}
           >
             {/* Background stripes */}
             {rows.map((row, i) => {
@@ -423,7 +424,7 @@ export function GanttView() {
                   y={y}
                   width={totalWidth}
                   height={h}
-                  fill={row.kind === 'section' ? '#f9fafb' : i % 2 === 0 ? '#ffffff' : '#fafafa'}
+                  fill={row.kind === 'section' ? 'var(--gantt-muted-surface)' : i % 2 === 0 ? 'var(--gantt-surface)' : 'var(--gantt-alt-surface)'}
                 />
               );
             })}
@@ -436,26 +437,26 @@ export function GanttView() {
                 y1={TIME_HEADER_H}
                 x2={tick.x}
                 y2={totalHeight}
-                stroke="#e5e7eb"
+                stroke="var(--gantt-grid)"
                 strokeWidth={0.5}
               />
             ))}
 
             {/* Time axis background */}
-            <rect x={0} y={0} width={totalWidth} height={TIME_HEADER_H} fill="#f9fafb" />
-            <line x1={0} y1={TIME_HEADER_H} x2={totalWidth} y2={TIME_HEADER_H} stroke="#e5e7eb" strokeWidth={1} />
-            <line x1={0} y1={24} x2={totalWidth} y2={24} stroke="#e5e7eb" strokeWidth={0.5} />
+            <rect x={0} y={0} width={totalWidth} height={TIME_HEADER_H} fill="var(--gantt-muted-surface)" />
+            <line x1={0} y1={TIME_HEADER_H} x2={totalWidth} y2={TIME_HEADER_H} stroke="var(--gantt-grid)" strokeWidth={1} />
+            <line x1={0} y1={24} x2={totalWidth} y2={24} stroke="var(--gantt-grid)" strokeWidth={0.5} />
 
             {/* Top axis labels */}
             {topLabels.map((tick, i) => (
               <g key={i}>
-                <line x1={tick.x} y1={0} x2={tick.x} y2={24} stroke="#d1d5db" strokeWidth={1} />
+                <line x1={tick.x} y1={0} x2={tick.x} y2={24} stroke="var(--gantt-grid-strong)" strokeWidth={1} />
                 <text
                   x={tick.x + 6}
                   y={16}
                   fontSize={11}
                   fontWeight={600}
-                  fill="#6b7280"
+                  fill="var(--gantt-axis-text)"
                   fontFamily="system-ui, sans-serif"
                 >
                   {tick.label}
@@ -470,7 +471,7 @@ export function GanttView() {
                 x={tick.x + (zoom === 'Day' ? 2 : 4)}
                 y={42}
                 fontSize={10}
-                fill="#9ca3af"
+                fill="var(--gantt-axis-muted)"
                 fontFamily="system-ui, sans-serif"
               >
                 {tick.label}
@@ -514,7 +515,7 @@ export function GanttView() {
               const barH = TASK_ROW_H - BAR_PADDING * 2;
               const color = getSectionColor(task.sectionId);
               const progressW = (task.progress / 100) * (width - 4);
-              const isDragging = dragRef.current?.taskId === task.id;
+              const isDragging = activeDragTaskId === task.id;
               const HANDLE_W = 6;
 
               return (
@@ -526,7 +527,7 @@ export function GanttView() {
                     width={width}
                     height={barH}
                     rx={4}
-                    fill="rgba(0,0,0,0.08)"
+                    fill="var(--gantt-shadow)"
                   />
                   {/* Bar background */}
                   <rect
